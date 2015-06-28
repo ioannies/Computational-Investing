@@ -92,17 +92,24 @@ def GenEquityDataDict(provider, ls_symbols, ldt_timestamps, ls_keys): #how can w
     ldf_data = c_dataobj.get_data(ldt_timestamps, ls_symbols, ls_keys)
     d_data = dict(zip(ls_keys, ldf_data))
     return d_data
-def main():
+def tutorial_1_main():
     ls_keys = ['open', 'high', 'low', 'close', 'volume', 'actual_close']
     TimeFrame = UsrSpTimeFrame()
     ls_symbols = UsrSpEquities(NumUsrSpEquities())
     d_data = GenEquityDataDict('Yahoo', ls_symbols, TimeFrame, ls_keys)
     na_price = d_data['close'].values
-    na_normalized_price = na_price / na_price[0, :]
     plt.clf()
     plt.plot(TimeFrame, na_price)
     plt.legend(ls_symbols)
     plt.ylabel('Adjusted Close')
     plt.xlabel('Date')
     plt.savefig('adjustedclose.pdf', format='pdf')
-main()
+    na_normalized_price = na_price / na_price[0, :]
+    na_rets = na_normalized_price.copy()
+    plt.clf()
+    plt.plot(TimeFrame,tsu.returnize0(na_rets))
+    plt.legend(ls_symbols)
+    plt.ylabel('Daily_Return')
+    plt.xlabel('Date')
+    plt.savefig('Daily_Return.pdf',format='pdf')
+tutorial_1_main()
