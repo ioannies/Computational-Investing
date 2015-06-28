@@ -33,14 +33,20 @@ import matplotlib.pyplot as plt #matlab like commands! :)
 import pandas as pd #data analysis toolkit
 import sys #interact with the system
 
-def UsrSpEquities(): #User Specified
+def NumUsrSpEquities(): #User Specified
+    MaxNumEquities = 20 #how many equities can we handle? arbitrarily chose 20?
     #Ask the command line which equities we want to get, returns a list of strings
     print "How Many Equities should we get?\n"
     #make sure we got the right data type!
     while 1: #1 is faster then true
-        NumUsrSpEquities = input("Please Enter an integer between 1 and 20: ") #arbitrarily chose 20?
-        if isinstance(NumUsrSpEquities, int):
+        print "Please Enter an integer between 1 and "
+        print MaxNumEquities
+        NumUsrSpEquities = input(": ") 
+        if isinstance(NumUsrSpEquities, int) and 1 <= NumUsrSpEquities <= MaxNumEquities: #quit the while loop only if it is an integer
             break
+    return NumUsrSpEquities
+
+def UsrSpEquities(NumUsrSpEquities):
     ls_symbols = [] #create an empty list to hold stock symbols
     for symbol_counter in range(0, NumUsrSpEquities):
         print "Enter Equity symbol number",symbol_counter+1
@@ -78,22 +84,25 @@ def UsrSpTimeFrame():
         if 1 <= day_end <= 31: #hopefully this month has 31 days...
             break
     end_date = dt.datetime(year_end, month_end, day_end)
-    dt_start = dt_timeframe[0]
-    dt_end = dt_timeframe[1]
     dt_timeofday = dt.timedelta(hours=16)
-    ldt_timestamps = du.getNYSEdays(dt_start,dt_end, dt_timeofday)
+    ldt_timestamps = du.getNYSEdays(start_date,end_date, dt_timeofday)
     return ldt_timestamps
 def GenEquityDataDict(provider, ls_symbols, ldt_timestamps, ls_keys): #how can we make this more absract?
     c_dataobj = da.DataAccess(provider)
     ldf_data = c_dataobj.get_data(ldt_timestamps, ls_symbols, ls_keys)
     d_data = dict(zip(ls_keys, ldf_data))
     return d_data
-ls_keys = ['open', 'high', 'low', 'close', 'volume', 'actual_close']
-d_data = GenEquityDataDict('Yahoo', UsrSpEquities(), UsrSpTimeFrame(), ls_keys)
-na_price = d_data['close'].values
-plt.clf()
-plt.plot(ldt_timestamps, na_price)
-plt.legend(ls_symbols)
-plt.ylabel('Adjusted Close')
-plt.xlabel('Date')
-plt.savefig('adjustedclose.pdf', format='pdf')
+def main():
+    ls_keys = ['open', 'high', 'low', 'close', 'volume', 'actual_close']
+    TimeFrame = UsrSpTimeFrame()
+    ls_symbols = UsrSpEquities(NumUsrSpEquities())
+    d_data = GenEquityDataDict('Yahoo', ls_symbols, TimeFrame, ls_keys)
+    na_price = d_data['close'].values
+    na_normalized_price = na_price / na_price[0, :]
+    plt.clf()
+    plt.plot(TimeFrame, na_price)
+    plt.legend(ls_symbols)
+    plt.ylabel('Adjusted Close')
+    plt.xlabel('Date')
+    plt.savefig('adjustedclose.pdf', format='pdf')
+main()
