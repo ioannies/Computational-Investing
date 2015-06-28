@@ -15,7 +15,7 @@ Cumulative return of the total portfolio
 An example of how you might call the function in your program:
 vol, daily_ret, sharpe, cum_ret = simulate(startdate, enddate, ['GOOG','AAPL','GLD','XOM'], [0.2,0.3,0.4,0.1])
 
-
+test
 '''
 
 #single line comments are initiated with #
