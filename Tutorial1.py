@@ -43,9 +43,9 @@ def PromptUsrNumEquities(): #ask the user how many equities we should be compari
             break
     return NumUsrSpEquities
 
-def PromptUsrEquities(NumUsrSpEquities): #Ask the command line which equities we want to get, returns a list of strings
+def PromptUsrEquities(Num_equities): #Ask the command line which equities we want to get, returns a list of strings
     ls_symbols = [] #create an empty list to hold stock symbols
-    for symbol_counter in range(0, NumUsrSpEquities):
+    for symbol_counter in range(0, Num_equities):
         print "Enter Equity symbol number",symbol_counter+1
         equity_symbol = raw_input(": ") #use raw input for strings
         ls_symbols.append(equity_symbol) #append is pythons built in function to add to lists
@@ -83,10 +83,23 @@ def PromptUsrTimeFrame():
     end_date = dt.datetime(year_end, month_end, day_end)
     return (start_date, end_date)
 
-def GenClosingTimeStamps(start_date, end_date): #creates a list of timestamps 1 a day at close for every day in the timeframe
+def PromptUsrAllocations(Num_equites):
+    print "What is the relative percentages of the assets of the portfolio's?"
+        for equity_counter in range(0, Num_equities):
+        print "Enter Equity symbol number",equity_counter+1
+        equity_percent = raw_input(": ")
+        lf_allocations.append(equity_percent)
+    return lf_allocations   
+'''
+Generates closing timestamps for each date in the timeframe
+@param start_date: is a datetime object (YYYY,MM,DD)
+@param end_date: is a datetime object (YYYY,MM,DD) 
+@return: a tuple with the timestamps and the closing time used
+'''
+def ClosingTimeStamps(start_date, end_date):
     dt_timeofday = dt.timedelta(hours=16) #initialize daily timestamp: closing prices, exchange closes at 4, so 16 hundred hours
     ldt_timestamps = du.getNYSEdays(start_date,end_date, dt_timeofday)
-    return ldt_timestamps
+    return (ldt_timestamps,dt_timeofday)
 
 def GenEquityDataDict(provider, ls_symbols, ldt_timestamps, ls_keys): #how can we make this more absract?
     c_dataobj = da.DataAccess(provider) #Create an object of the QSTK-dataaccess class with provider as the source (QSTK)
@@ -96,12 +109,12 @@ def GenEquityDataDict(provider, ls_symbols, ldt_timestamps, ls_keys): #how can w
     d_data = dict(zip(ls_keys, ldf_data))
     return d_data
 
-'''
-' Calculate Portfolio Statistics 
-' @param na_normalized_price: NumPy Array for normalized prices (starts at 1)
-' @param lf_allocations: allocation list
-' @return list of statistics:
-' (Volatility, Average Return, Sharpe, Cumulative Return)
+''' 
+Calculate Portfolio Statistics 
+ @param na_normalized_price: NumPy Array for normalized prices (starts at 1)
+ @param lf_allocations: allocation list
+ @return list of statistics:
+ (Volatility, Average Return, Sharpe, Cumulative Return)
 '''
 def calcStats(na_normalized_price, lf_allocations):
     #Calculate cumulative daily portfolio value
@@ -136,12 +149,13 @@ def calcStats(na_normalized_price, lf_allocations):
     return [f_portf_volatility, f_portf_avgret, f_portf_sharpe, f_portf_cumrets, na_portf_value];
 
 '''
-' Simulate and assess performance of multi-stock portfolio
-' @param li_startDate:    start date in list structure: [year,month,day] e.g. [2012,1,28]
-' @param li_endDate:    end date in list structure: [year,month,day] e.g. [2012,12,31]
-' @param ls_symbols:    list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
-' @param lf_allocations:    list of allocations: e.g. [0.2,0.3,0.4,0.1]
-' @param b_print:       print results (True/False)
+ Simulate and assess performance of multi-stock portfolio
+ @param d_data hash table linking symbol keys and stock prices
+ @param li_startDate:    start date in list structure: [year,month,day] e.g. [2012,1,28]
+ @param li_endDate:    end date in list structure: [year,month,day] e.g. [2012,12,31]
+ @param ls_symbols:    list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
+ @param lf_allocations:    list of allocations: e.g. [0.2,0.3,0.4,0.1]
+ @param b_print:       print results (True/False)
 '''
 def simulate(li_startDate, li_endDate, ls_symbols, lf_allocations, b_print):
  
@@ -186,14 +200,10 @@ def simulate(li_startDate, li_endDate, ls_symbols, lf_allocations, b_print):
     #Return list: [Volatility, Average Returns, Sharpe Ratio, Cumulative Return]
     return lf_Stats[0:3]; 
 
-def optimize(li_startDate, li_endDate, ls_symbols, b_precision):
+def optimize(d_data, li_startDate, li_endDate, ldt_timestamps, ls_symbols, b_precision):
  
     start = time.time();
- 
-    #Prepare data for statistics
-    ld_alldata = readData(li_startDate, li_endDate, ls_symbols);
-    d_data = ld_alldata[0];
- 
+       return [d_data, dt_start, dt_end, dt_timeofday, ldt_timestamps];
     #Get numpy ndarray of close prices (numPy)
     na_price = d_data['close'].values;
  
@@ -299,10 +309,14 @@ def optimize(li_startDate, li_endDate, ls_symbols, b_precision):
 def tutorial_1_main():
     ls_keys = ['open', 'high', 'low', 'close', 'volume', 'actual_close']
     DateThreshold = PromptUsrTimeFrame()
-    TimeFrame = GenClosingTimeStamps(DateThreshold[0], DateThreshold[1])
-    ls_symbols = PromptUsrEquities(PromptUsrNumEquities())
+    ls_ClosingTimeStamps = ClosingTimeStamps(DateThreshold[0], DateThreshold[1])
+    TimeFrame = ls_ClosingTimeStamps[0]
+    Num_equities = PromptUsrNumEquities()
+    ls_symbols = PromptUsrEquities(Num_equities)
     d_data = GenEquityDataDict('Yahoo', ls_symbols, TimeFrame, ls_keys)
     na_price = d_data['close'].values
+    lf_allocations = PromptUsrAllocations(Num_equities)
+    simulate(DateThreshold[0],DateThreshold[1],ls_symbols,lf_allocations,True)
     plt.clf()
     plt.plot(TimeFrame, na_price)
     plt.legend(ls_symbols)
