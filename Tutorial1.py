@@ -15,7 +15,7 @@ Cumulative return of the total portfolio
 An example of how you might call the function in your program:
 vol, daily_ret, sharpe, cum_ret = simulate(startdate, enddate, ['GOOG','AAPL','GLD','XOM'], [0.2,0.3,0.4,0.1])
 
-test
+
 '''
 
 #single line comments are initiated with #
@@ -92,8 +92,8 @@ def PromptUsrAllocations(Num_equites):
     return lf_allocations   
 '''
 Generates closing timestamps for each date in the timeframe
-@param start_date: is a datetime object (YYYY,MM,DD)
-@param end_date: is a datetime object (YYYY,MM,DD) 
+@param start_date: a datetime object (YYYY,MM,DD)
+@param end_date:   a datetime object (YYYY,MM,DD) 
 @return: a tuple with the timestamps and the closing time used
 '''
 def ClosingTimeStamps(start_date, end_date):
@@ -112,7 +112,7 @@ def GenEquityDataDict(provider, ls_symbols, ldt_timestamps, ls_keys): #how can w
 ''' 
 Calculate Portfolio Statistics 
  @param na_normalized_price: NumPy Array for normalized prices (starts at 1)
- @param lf_allocations: allocation list
+ @param lf_allocations:      allocation list
  @return list of statistics:
  (Volatility, Average Return, Sharpe, Cumulative Return)
 '''
@@ -150,14 +150,14 @@ def calcStats(na_normalized_price, lf_allocations):
 
 '''
  Simulate and assess performance of multi-stock portfolio
- @param d_data hash table linking symbol keys and stock prices
- @param li_startDate:    start date in list structure: [year,month,day] e.g. [2012,1,28]
- @param li_endDate:    end date in list structure: [year,month,day] e.g. [2012,12,31]
- @param ls_symbols:    list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
- @param lf_allocations:    list of allocations: e.g. [0.2,0.3,0.4,0.1]
- @param b_print:       print results (True/False)
+ @param d_data:         hash table linking symbol keys and stock prices
+ @param dt_start:   start date in list structure: [year,month,day] e.g. [2012,1,28]
+ @param dt_end:     end date in list structure: [year,month,day] e.g. [2012,12,31]
+ @param ls_symbols:     list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
+ @param lf_allocations: list of allocations: e.g. [0.2,0.3,0.4,0.1]
+ @param b_print:        print results (True/False)
 '''
-def simulate(li_startDate, li_endDate, ls_symbols, lf_allocations, b_print):
+def simulate(d_data, dt_start, dt_end, ls_symbols, lf_allocations, b_print):
  
     start = time.time();
     
@@ -173,9 +173,6 @@ def simulate(li_startDate, li_endDate, ls_symbols, lf_allocations, b_print):
         print "ERROR: Make sure allocations add up to 1.";
         return;
  
-    #Prepare data for statistics
-    d_data = readData(li_startDate, li_endDate, ls_symbols)[0];
- 
     #Get numpy ndarray of close prices (numPy)
     na_price = d_data['close'].values;
  
@@ -187,8 +184,8 @@ def simulate(li_startDate, li_endDate, ls_symbols, lf_allocations, b_print):
  
     #Print results
     if b_print:
-        print "Start Date: ", li_startDate;
-        print "End Date: ", li_endDate;
+        print "Start Date: ", dt_start;
+        print "End Date: ", dt_end;
         print "Symbols: ", ls_symbols;
         print "Volatility (stdev daily returns): " , lf_Stats[0];
         print "Average daily returns: " , lf_Stats[1];
@@ -200,10 +197,19 @@ def simulate(li_startDate, li_endDate, ls_symbols, lf_allocations, b_print):
     #Return list: [Volatility, Average Returns, Sharpe Ratio, Cumulative Return]
     return lf_Stats[0:3]; 
 
-def optimize(d_data, li_startDate, li_endDate, ldt_timestamps, ls_symbols, b_precision):
- 
+'''
+ Optimize portfolio allocations  to maximise Sharpe ratio
+ @param d_data:        hash table linking symbol keys and stock prices
+ @param dt_start:      start date in list structure: [year,month,day] e.g. [2012,1,28]
+ @param dt_end:        end date in list structure: [year,month,day] e.g. [2012,12,31]
+ @param dt_timeofday:  what time the stock data was taken
+ @param ls_symbols:    list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
+ @param b_precision:   true - precise optimization; false - 10% increments & positive weights
+'''
+
+def optimize(d_data, dt_start, dt_end, dt_timeofday, ldt_timestamps, ls_symbols, b_precision):
+    ld_alldata = [d_data, dt_start, dt_end, dt_timeofday, ldt_timestamps]
     start = time.time();
-       return [d_data, dt_start, dt_end, dt_timeofday, ldt_timestamps];
     #Get numpy ndarray of close prices (numPy)
     na_price = d_data['close'].values;
  
@@ -217,7 +223,7 @@ def optimize(d_data, li_startDate, li_endDate, ldt_timestamps, ls_symbols, b_pre
         
         #Define objective function (sharpe ratio)
         def objective_sharpe(x):
-            return simulate(li_startDate, li_endDate, ls_symbols, x)[2];
+            return simulate(dt_start, dt_end, ls_symbols, x)[2];
  
         #Work on this later...
         
@@ -280,7 +286,7 @@ def optimize(d_data, li_startDate, li_endDate, ldt_timestamps, ls_symbols, b_pre
  
         #Plot portfolio daily values over time period
         #Obtain benchmark $SPX data
-        d_spx = readData(li_startDate, li_endDate, ["$SPX"])[0];
+        d_spx = d_data['$SPX'].values;
         na_spxprice = d_spx['close'].values;
         na_spxnormalized_price = na_spxprice / na_spxprice[0,:];
         lf_spxStats = calcStats(na_spxnormalized_price, [1]);
@@ -295,8 +301,8 @@ def optimize(d_data, li_startDate, li_endDate, ldt_timestamps, ls_symbols, b_pre
         plt.savefig('chart.pdf', format='pdf');
  
         #Print results:
-        print "Start Date: ", li_startDate;
-        print "End Date: ", li_endDate;
+        print "Start Date: ", dt_start;
+        print "End Date: ", dt_end;
         print "Symbols: ", ls_symbols;
         print "Optimal Allocations: ", lf_CurrEffAllocation;
         print "Volatility (stdev daily returns): " , lf_CurrStats[0];
