@@ -90,6 +90,7 @@ def GenClosingTimeStamps(start_date, end_date): #creates a list of timestamps 1 
 
 def GenEquityDataDict(provider, ls_symbols, ldt_timestamps, ls_keys): #how can we make this more absract?
     c_dataobj = da.DataAccess(provider) #Create an object of the QSTK-dataaccess class with provider as the source (QSTK)
+    #so far tested to use with provider Yahoo.
     #Read the data and map it to ls_keys via dict() (i.e. Hash Table structure)
     ldf_data = c_dataobj.get_data(ldt_timestamps, ls_symbols, ls_keys)
     d_data = dict(zip(ls_keys, ldf_data))
