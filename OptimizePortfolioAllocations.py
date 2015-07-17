@@ -9,7 +9,6 @@
  @param d_data:        hash table linking symbol keys and stock prices
  @param dt_start:      start date in list structure: [year,month,day] e.g. [2012,1,28]
  @param dt_end:        end date in list structure: [year,month,day] e.g. [2012,12,31]
- @param dt_timeofday:  what time the stock data was taken
  @param ls_symbols:    list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
  @param non_linear:   true - precise optimization; false - 10% increments & positive weights
  @return: optimized list of allocations by percentage
@@ -17,11 +16,11 @@
 
 import time
 import matplotlib.pyplot as plt
-import CalcStats
+import calcStats
+import calcPerms
 
-def optimizePortfolioAllocations(d_data, dt_start, dt_end, dt_timeofday,
-                                  ldt_timestamps, ls_symbols, non_linear):
-    ld_alldata = [d_data, dt_start, dt_end, dt_timeofday, ldt_timestamps]
+def optimizePortfolioAllocations(d_data, dt_start, dt_end, ls_symbols, non_linear=0):
+    ld_alldata = [d_data, dt_start, dt_end]
     start = time.time();
     #Get numpy ndarray of close prices (numPy)
     na_price = d_data['close'].values;
@@ -48,16 +47,6 @@ def optimizePortfolioAllocations(d_data, dt_start, dt_end, dt_timeofday,
  
         #Using backtracking and permutation
         #Permutation function
-        def permCalc(elements):
-            if len(elements) <=1:
-                yield elements;
-            else:
-                for perm in permCalc(elements[1:]):
-                    for i in range(len(elements)):
-                        #nb elements[0:1] works in both string and list contexts
-                        yield perm[:i] + elements[0:1] + perm[i:];
- 
-        #Backtracking function results in list of integers that sum to 10
         global li_sol, li_valid, i_sum, i_numEls;
         TARGET = 10;
         li_sol = [0] * len(ls_symbols);
@@ -65,12 +54,12 @@ def optimizePortfolioAllocations(d_data, dt_start, dt_end, dt_timeofday,
         li_valid = [];
         i_sum = 0;
         i_numEls = 0;
-        def back(lastEl):
+        def back(lastEl):        #Backtracking function results in list of integers that sum to 10
             global li_sol, li_valid, i_sum, i_numEls;
             #base-case
             if i_numEls >= len(ls_symbols):
                 if i_sum == TARGET:
-                    li_valid.extend(list(permCalc(li_sol)));
+                    li_valid.extend(list(calcPerms.allPerms(li_sol)));
                 return;
             #continuation
             for i in range(lastEl, TARGET + 1 - i_sum):
@@ -93,19 +82,18 @@ def optimizePortfolioAllocations(d_data, dt_start, dt_end, dt_timeofday,
         #Calculate Sharpe ratio for each valid allocation
         f_CurrMaxSharpe = 0.0;
         for allocation in lf_valid:
-            t_Stats = CalcStats(na_normalized_price, allocation);
+            t_Stats = calcStats.CalcStats(na_normalized_price, allocation);
             if t_Stats[2] > f_CurrMaxSharpe:
                 lf_CurrStats = t_Stats
                 f_CurrMaxSharpe = t_Stats[2];
                 lf_CurrEffAllocation = allocation;
-        optimalAllocations = lf_CurrEffAllocation
+                optimalAllocations = lf_CurrEffAllocation
  
         #Plot portfolio daily values over time period
         #Obtain benchmark $SPX data
-        d_spx = d_data['$SPX'].values;
-        na_spxprice = d_spx['close'].values;
+        na_spxprice = d_data['close']['$SPX'].values
         na_spxnormalized_price = na_spxprice / na_spxprice[0,:];
-        lf_spxStats = CalcStats(na_spxnormalized_price, [1]);
+        lf_spxStats = calcStats.CalcStats(na_spxnormalized_price, [1]);
         #Plot
         plt.clf();
         plt.plot(ld_alldata[4], lf_spxStats[4]);    #SPX
