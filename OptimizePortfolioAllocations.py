@@ -4,22 +4,26 @@
 
 
 
-'''
- @summary Optimize portfolio allocations  to maximise Sharpe ratio
- @param d_data:        hash table linking symbol keys and stock prices
- @param dt_start:      start date in list structure: [year,month,day] e.g. [2012,1,28]
- @param dt_end:        end date in list structure: [year,month,day] e.g. [2012,12,31]
- @param ls_symbols:    list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
- @param non_linear:   true - precise optimization; false - 10% increments & positive weights
- @return: optimized list of allocations by percentage
-'''
+
 
 import time
 import matplotlib.pyplot as plt
 import calcStats
 import calcPerms
+from scipy.optimize import minimize
 
-def optimizePortfolioAllocations(d_data, dt_start, dt_end, ls_symbols, non_linear=0):
+def optimizePortfolioAllocations(d_data, dt_start, dt_end, ldt_timestamps, ls_symbols, lf_allocations, precision=False):
+    '''
+@summary Optimize portfolio allocations  to maximise Sharpe ratio
+@param d_data:        hash table linking symbol keys and stock prices
+@param dt_start:      start date in list structure: [year,month,day] e.g. [2012,1,28]
+@param dt_end:        end date in list structure: [year,month,day] e.g. [2012,12,31]
+@param ldt_timestamps: list of timestamps corresponding to value
+@param ls_symbols:    list of symbols: e.g. ['GOOG','AAPL','GLD','XOM']
+@param lf_allocations: list of allocations of assets
+@param precision:   true - optimization using scipy.optimize; false - 10% increments & positive weights
+@return: optimized list of allocations by percentage
+'''
     ld_alldata = [d_data, dt_start, dt_end]
     start = time.time();
     #Get numpy ndarray of close prices (numPy)
@@ -30,16 +34,17 @@ def optimizePortfolioAllocations(d_data, dt_start, dt_end, ls_symbols, non_linea
     na_normalized_price = na_price / na_price[0,:];
     
     
-    if non_linear:
+    if precision:
         #Precise optimization:
+        # by calling scipy's optimize? 
         
         #Define objective function (sharpe ratio)
-        def objective_sharpe():
-            (x)
-            # allocations by calling scipy's optimize? simulate(dt_start, dt_end, ls_symbols, x)[2];
-            return lf_allocations
- 
-        #Work on this later...
+        def sharpe(lf_allocations, d_data, dt_start, dt_end, ls_symbols):
+            stats = calcStats.PastPortfolioPerformance(d_data, dt_start, dt_end, ls_symbols, lf_allocations)
+            return stats[2];
+        initialGuess = lf_allocations
+        optimal = -minimize(sharpe, initialGuess, (d_data, dt_start, dt_end, ls_symbols), method = 'Nelder-Mead')
+        return optimal
         
     else:
         
@@ -91,27 +96,27 @@ def optimizePortfolioAllocations(d_data, dt_start, dt_end, ls_symbols, non_linea
  
         #Plot portfolio daily values over time period
         #Obtain benchmark $SPX data
-        na_spxprice = d_data['close']['$SPX'].values
-        na_spxnormalized_price = na_spxprice / na_spxprice[0,:];
-        lf_spxStats = calcStats.CalcStats(na_spxnormalized_price, [1]);
+        #na_spxprice = d_data['close']['$SPX'].values
+        #na_spxnormalized_price = na_spxprice / na_spxprice[0]
+        #lf_spxStats = calcStats.CalcStats(na_spxnormalized_price, [1])
         #Plot
-        plt.clf();
-        plt.plot(ld_alldata[4], lf_spxStats[4]);    #SPX
-        plt.plot(ld_alldata[4], lf_CurrStats[4]);  #Portfolio
-        plt.axhline(y=0, color='r');
-        plt.legend(['$SPX', 'Portfolio']);
-        plt.ylabel('Daily Value');
-        plt.xlabel('Date');
-        plt.savefig('chart.pdf', format='pdf');
+        plt.clf()
+        #plt.plot(ld_alldata[4], lf_spxStats[4])    #SPX
+        plt.plot(ldt_timestamps, lf_CurrStats[4])  #Portfolio
+        plt.axhline(y=0, color='r')
+        plt.legend(['$SPX', 'Portfolio'])
+        plt.ylabel('Daily Value')
+        plt.xlabel('Date')
+        plt.savefig('chart.pdf', format='pdf')
  
         #Print results:
-        print "Start Date: ", dt_start;
-        print "End Date: ", dt_end;
-        print "Symbols: ", ls_symbols;
-        print "Optimal Allocations: ", optimalAllocations;
-        print "Volatility (stdev daily returns): " , lf_CurrStats[0];
-        print "Average daily returns: " , lf_CurrStats[1];
-        print "Sharpe ratio: " , lf_CurrStats[2];
-        print "Cumulative daily return: " , lf_CurrStats[3]; 
-        print "Run in: " , (time.time() - start) , " seconds.";
-    return optimalAllocations;
+        print "Start Date: ", dt_start
+        print "End Date: ", dt_end
+        print "Symbols: ", ls_symbols
+        print "Optimal Allocations: ", optimalAllocations
+        print "Volatility (stdev daily returns): " , lf_CurrStats[0]
+        print "Average daily returns: " , lf_CurrStats[1]
+        print "Sharpe ratio: " , lf_CurrStats[2]
+        print "Cumulative daily return: " , lf_CurrStats[3] 
+        print "Run in: " , (time.time() - start) , " seconds."
+    return optimalAllocations
